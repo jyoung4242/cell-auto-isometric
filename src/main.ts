@@ -123,3 +123,4 @@ game.currentScene.camera.strategy.lockToActor(player);
 game.currentScene.camera.zoom = 1.5;
 
 console.log(myMap);
+game.toggleDebug();

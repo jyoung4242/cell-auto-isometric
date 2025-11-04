@@ -83,7 +83,7 @@ export class LevelGen {
         });
 
         tiles.solid = true;
-        tiles.addCollider(Shape.Polygon([vec(-4, 17), vec(32, -4), vec(68, 17), vec(32, 36)]));
+        tiles.addCollider(Shape.Polygon([vec(0, 17), vec(32, 0), vec(64, 17), vec(32, 32)]));
         tiles.addGraphic(edgeTileGG);
       }
 
@@ -91,6 +91,9 @@ export class LevelGen {
     }
 
     iMap.updateColliders();
+    let col = iMap.collider.get();
+    console.log(col);
+
     return iMap;
   }
 
