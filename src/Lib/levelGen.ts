@@ -1,6 +1,6 @@
 import { PerlinGenerator } from "@excaliburjs/plugin-perlin";
 import { Color, GraphicsGroup, IsometricMap, IsometricMapOptions, Random, Shape, vec } from "excalibur";
-import { grassSprite, Resources } from "../resources";
+import { grassSprite, overlayArray, Resources } from "../resources";
 
 export type WoodsMapOptions = IsometricMapOptions & {
   loops: number;
@@ -55,7 +55,17 @@ export class LevelGen {
       }
 
       if (this.map[tIndex] === 0) {
-        tiles.addGraphic(grassSprite);
+        let grassGG = new GraphicsGroup({ useAnchor: true, members: [grassSprite] });
+
+        //random overly
+        let nextRnd = this.rng.next();
+
+        if (nextRnd > 0.7) {
+          let rndSprite = this.rng.pickOne(overlayArray).clone();
+          grassGG.members.push(rndSprite);
+        }
+
+        tiles.addGraphic(grassGG);
       } else {
         //tiles.addGraphic(waterSprite);
         let edgeTileGG = new GraphicsGroup({
