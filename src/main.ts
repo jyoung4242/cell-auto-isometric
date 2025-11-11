@@ -7,6 +7,7 @@ import { model, template } from "./UI/UI";
 import { LevelGen } from "./Lib/levelGen";
 import { loader } from "./resources";
 import { WalkingPlayer } from "./Actors/walkingPlayer";
+import { FOW } from "./Lib/fowSystem";
 
 await UI.create(document.body, model, template).attached;
 
@@ -33,10 +34,6 @@ let woodsOptions: IsometricMapOptions = {
 
 let myMap = levGen.runFullMapScript(woodsOptions);
 if (!myMap) throw new Error("map is null");
-// console.log(performance.now() - timestamp);
-// let mapCenter = myMap.get(BodyComponent).globalPos.add(vec(0, myMap.tiles[0].data.get("mapheight") / 2));
-// game.currentScene.camera.pos = mapCenter;
-// game.currentScene.camera.zoom = 0.22;
 game.add(myMap);
 
 let cullingSize = 20;
@@ -119,8 +116,12 @@ if (!playerTile) throw new Error("player tile is null");
 
 let player = new WalkingPlayer(playerTile.pos.clone());
 game.add(player);
+let world = game.currentScene.world;
+let fowSystem = new FOW(world);
+fowSystem.registerMap(myMap);
+
+world.add(fowSystem);
+
 game.currentScene.camera.strategy.lockToActor(player);
 game.currentScene.camera.zoom = 1.5;
-
-console.log(myMap);
-game.toggleDebug();
+// game.toggleDebug();

@@ -14,7 +14,7 @@ export const groundSS = SpriteSheet.fromImageSource({
   image: Resources.groundSS,
   grid: {
     rows: 2,
-    columns: 1,
+    columns: 2,
     spriteHeight: 38,
     spriteWidth: 64,
   },
@@ -32,6 +32,7 @@ export const overlaySS = SpriteSheet.fromImageSource({
 
 export const grassSprite = groundSS.getSprite(0, 0);
 export const waterSprite = groundSS.getSprite(0, 1);
+export const fogSprite = groundSS.getSprite(1, 1);
 
 export const overlayArray = [
   overlaySS.getSprite(0, 0),

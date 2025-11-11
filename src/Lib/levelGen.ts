@@ -1,11 +1,14 @@
 import { PerlinGenerator } from "@excaliburjs/plugin-perlin";
-import { Color, GraphicsGroup, IsometricMap, IsometricMapOptions, Random, Shape, vec } from "excalibur";
-import { grassSprite, overlayArray, Resources } from "../resources";
+import { Color, GraphicsGroup, IsometricMap, IsometricMapOptions, IsometricTile, Random, Shape, vec } from "excalibur";
+import { grassSprite, overlayArray, fogSprite, Resources } from "../resources";
 
 export type WoodsMapOptions = IsometricMapOptions & {
   loops: number;
   lowLimit: number;
   highLimit: number;
+};
+export type ExIsoMetricMap = IsometricMap & {
+  dirtyTiles?: IsometricTile[];
 };
 
 export type Region = { x: number; y: number };
@@ -40,19 +43,14 @@ export class LevelGen {
   drawMap(): IsometricMap | null {
     if (!this.mapConfig) return null;
 
-    let iMap = new IsometricMap(this.mapConfig);
+    let iMap = Object.assign(new IsometricMap(this.mapConfig), { dirtyTiles: [] }) as ExIsoMetricMap;
 
     // apply noise field to map
-
-    let tileMapWidth = iMap.columns * iMap.tileWidth;
-    let tileMapHeight = iMap.rows * iMap.tileHeight;
-
     let tIndex = 0;
     for (let tiles of iMap.tiles) {
-      if (tIndex == 0) {
-        tiles.data.set("mapwidth", tileMapWidth);
-        tiles.data.set("mapheight", tileMapHeight);
-      }
+      tiles.data.set("fog", true);
+      tiles.data.set("graphicData", null);
+      tiles.data.set("bounds", null);
 
       if (this.map[tIndex] === 0) {
         let grassGG = new GraphicsGroup({ useAnchor: true, members: [grassSprite] });
@@ -62,12 +60,10 @@ export class LevelGen {
 
         if (nextRnd > 0.7) {
           let rndSprite = this.rng.pickOne(overlayArray).clone();
-          grassGG.members.push(rndSprite);
+          grassGG.members.push({ graphic: rndSprite, offset: vec(32, 0) });
         }
-
-        tiles.addGraphic(grassGG);
+        tiles.data.set("graphicData", grassGG);
       } else {
-        //tiles.addGraphic(waterSprite);
         let edgeTileGG = new GraphicsGroup({
           useAnchor: true,
           members: [
@@ -81,12 +77,21 @@ export class LevelGen {
             },
           ],
         });
-
         tiles.solid = true;
         tiles.addCollider(Shape.Polygon([vec(0, 17), vec(32, 0), vec(64, 17), vec(32, 32)]));
-        tiles.addGraphic(edgeTileGG);
+        tiles.data.set("graphicData", edgeTileGG);
       }
-
+      tiles.addGraphic(fogSprite);
+      // write bounds to tile data
+      const tileBoundingBox = tiles.getGraphics()[0].localBounds;
+      let tilepos = tiles.pos.clone();
+      let tileGlobalBounds = {
+        top: tilepos.y + tileBoundingBox.top,
+        bottom: tilepos.y + tileBoundingBox.bottom,
+        left: tilepos.x + tileBoundingBox.left,
+        right: tilepos.x + tileBoundingBox.right,
+      };
+      tiles.data.set("bounds", tileGlobalBounds);
       tIndex++;
     }
 
@@ -94,6 +99,42 @@ export class LevelGen {
     let col = iMap.collider.get();
     console.log(col);
 
+    let dirtyTiles: IsometricTile[] = [];
+    Object.assign(iMap, dirtyTiles);
+
+    iMap.update = () => {
+      // timestamp
+      if (!iMap.tags.has("dirty")) return;
+      iMap.removeTag("dirty");
+      // loop through tiles and redraw them
+      if (!iMap.dirtyTiles) return;
+      if (iMap.dirtyTiles.length == 0) return;
+
+      for (const tile of iMap.dirtyTiles) {
+        // console.log("redrawing dirty tiles: ", tile);
+
+        tile.clearGraphics();
+        if (tile.data.get("fog") === true) {
+          tile.addGraphic(fogSprite);
+        } else {
+          tile.addGraphic(tile.data.get("graphicData"));
+        }
+      }
+
+      iMap.dirtyTiles = [];
+      // for (let tiles of iMap.tiles) {
+      //   // remove all graphics
+
+      //   tiles.clearGraphics();
+      //   if (tiles.data.get("fog") === true) {
+      //     tiles.addGraphic(fogSprite);
+      //   } else {
+      //     tiles.addGraphic(tiles.data.get("graphicData"));
+      //   }
+      // }
+    };
+
+    iMap.addTag("dirty");
     return iMap;
   }
 
@@ -114,6 +155,10 @@ export class LevelGen {
 
     availableTiles = availableTiles.filter(tile => tile !== false);
     return this.rng.pickOne(availableTiles);
+  }
+
+  isTileFree(index: number) {
+    return this.map[index] === 0;
   }
 
   resolveRegions(): IsometricMap | null {
